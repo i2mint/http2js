@@ -1,0 +1,17 @@
+{
+    "extends": [
+        "tslint:recommended",
+        "tslint-no-unused-expression-chai"
+    ],
+    "plugins": [],
+    "rules": {
+        "interface-name": false,
+        "quotemark": [true, "single", "avoid-escape"],
+        "variable-name": [true, "ban-keywords", "allow-leading-underscore" ],
+        "no-unused-variable": true,
+        "trailing-comma": false,
+        "prefer-conditional-expression": false,
+        "object-literal-sort-keys": false,
+        "no-console": false
+    }
+}
