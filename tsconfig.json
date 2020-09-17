@@ -4,8 +4,8 @@
     "module": "commonjs",
     "declaration": true,
     "sourceMap": true,
-    "outDir": "./working",
-    "rootDir": "./",
+    "outDir": "./lib",
+    "rootDir": "./src",
 
     /* Strict Type-Checking Options */
     "strictNullChecks": true,

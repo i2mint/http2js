@@ -39,5 +39,6 @@ logs/*
 node_modules
 
 # Distribution package
-data-access-*.tgz
+http2js-*.tgz
 dist/
+lib/

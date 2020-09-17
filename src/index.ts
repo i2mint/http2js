@@ -8,12 +8,12 @@ try {
     fs = null;
 }
 
-export function mkClientFromFile(path: string): Http2jsClient {
+export function mkClientFromFile(path: string, auth: any): Http2jsClient {
     if (!fs) {
         throw new Error('Cannot read from the file system in a browser environment.');
     }
-    const openapiSpec: any = fs.readFileSync(path)
-    return new Http2jsClient(openapiSpec);
+    const openapiSpec: any = JSON.parse(fs.readFileSync(path, 'utf-8'));
+    return new Http2jsClient(openapiSpec, auth);
 }
 
 export default Http2jsClient;

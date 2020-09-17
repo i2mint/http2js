@@ -1,5 +1,5 @@
 // tslint:disable-next-line:no-var-requires
-const fetch: any = window ? window.fetch : require('node-fetch');
+const fetch: any = typeof window !== 'undefined' ? window.fetch : require('node-fetch');
 import * as _ from 'lodash';
 
 export const enum AUTH_TYPES {
@@ -32,14 +32,14 @@ export default class Http2jsClient {
         const serverInfo: any = openapiSpec.info;
         this.title = serverInfo.title;
         this.version = serverInfo.version;
-        this.baseUrl = serverInfo.servers[0].url;
+        this.baseUrl = openapiSpec.servers[0].url;
         const security: any = openapiSpec.security;
         if (security && auth) {
             this.initSecurity(openapiSpec, auth);
         }
         _.forEach(openapiSpec.paths, (pathSpec: any, pathname: string) =>
             _.forEach(pathSpec, (methodSpec: any, methodname: string) =>
-                this.registerMethod(pathname, methodname.toUpperCase(), pathSpec)));
+                this.registerMethod(pathname, methodname.toUpperCase(), methodSpec)));
     }
 
     initSecurity(openapiSpec, auth): void {
@@ -69,6 +69,7 @@ export default class Http2jsClient {
     }
 
     registerMethod(pathname: string, httpMethod: string, methodSpec: any): void {
+        console.log({ pathname, httpMethod, methodSpec: JSON.stringify(methodSpec) });
         const url: string = this.baseUrl + pathname;
         const contentType: string = _.keys(methodSpec.requestBody.content)[0];
         const methodName: string = methodSpec['x-method_name'] || pathname;
@@ -88,11 +89,21 @@ export default class Http2jsClient {
 
     handleRequest(url, fetchOptions): Promise<any> {
         return this.ensureLogin()
-            .then(() => fetch(url, fetchOptions));
+            .then(() => {
+                if (!fetchOptions.headers) {
+                    fetchOptions.headers = this.header;
+                } else {
+                    fetchOptions.headers.Authorization = this.header.Authorization;
+                }
+                console.log({ url, fetchOptions });
+                return fetch(url, fetchOptions);
+            }).then((response: Response) => response.json())
     }
 
     ensureLogin(): Promise<any> {
+        console.log({ authType: this.authType });
         if (this.authType !== AUTH_TYPES.JWT) {
+            console.log()
             return Promise.resolve(true);
         } else if (this.header.Authorization) {
             if (this.refreshExpiration) {
@@ -105,12 +116,14 @@ export default class Http2jsClient {
                 }
             }
         }
-        return Promise.resolve();
+        return this.login();
     }
 
     login(): Promise<void> {
+        console.log({ url: this.loginUrl, args: this.loginArgs });
         return fetch(this.loginUrl, {
             body: JSON.stringify(this.loginArgs),
+            headers: {'Content-type': 'application/json'},
             method: 'POST',
         }).then((rawResponse: Response) => rawResponse.json())
         .then((loginResult: any) => this.receiveLogin(loginResult));
@@ -121,6 +134,7 @@ export default class Http2jsClient {
     }
 
     receiveLogin(loginResult: any): void {
+        console.log({ loginResult });
         if (loginResult.refresh_expiration) {
             this.refreshExpiration = loginResult.refresh_expiration;
         }
