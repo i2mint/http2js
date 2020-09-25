@@ -1,6 +1,7 @@
+import { getGlobalState } from '../global-state';
 import { mkClientFromFile } from '../index';
 
-const path: string = '/Users/Steve.Herzog/projects/otosense/device_svc_openapi.json';
+const path: string = './resources/device-svc-openapi.json';
 
 const auth: any = {
     account: 'analogdevices_test',
