@@ -74,9 +74,15 @@ export default class Http2jsClient {
                 this.loginUrl = loginDetails.login_url;
                 const authArgs: string[] = loginDetails.login_inputs;
                 this.loginArgs = {};
-                _.forEach(authArgs, (key: string) => {
-                    this.loginArgs[key] = auth[key] || '';
-                });
+                _.forEach(Object.keys(auth), (key: string) => {
+                    console.log('key', key)
+                    if (_.some(authArgs, (e: string) => e === key)) {
+                        this.loginArgs[key] = auth[key];
+                    }
+                })
+                console.log('auth', auth)
+                console.log('authArgs', authArgs)
+                console.log('this.loginArgs', this.loginArgs)
                 this.refreshInputKeys = loginDetails.refresh_inputs || [];
                 this.loginResponseKeys = loginDetails.outputs || [];
                 break;
@@ -87,17 +93,31 @@ export default class Http2jsClient {
     }
 
     registerMethod(pathname: string, httpMethod: string, methodSpec: any): void {
-        const url: string = this.baseUrl + pathname;
-        const contentType: string = _.keys(methodSpec.requestBody.content)[0];
+        let url: string = this.baseUrl + pathname;
+        const contentType: string = httpMethod === HTTP_METHODS.GET ? '' : _.keys(methodSpec.requestBody.content)[0];
         const methodName: string = methodSpec['x-method_name'] || pathname;
-        const argNames: string[] = _.keys(methodSpec.requestBody.content[contentType].schema.properties);
+        const pathArgNames: string[] = !!methodSpec.parameters ? _.map(_.filter(methodSpec.parameters, e => e.in === 'path'), (e) => e.name) : []
+        const queryArgNames: string[] = !!methodSpec.parameters ? _.map(_.filter(methodSpec.parameters, e => e.in === 'query'), (e) => e.name) : []
+        const bodyArgNames: string[] = !!methodSpec.requestBody ? _.keys(methodSpec.requestBody.content[contentType].schema.properties) : []
         this[methodName] = (methodArgs: any) => {
             const fetchOptions: any = {
                 headers: { ...this.header, 'Content-type': contentType },
                 method: httpMethod,
             };
-            if (httpMethod !== HTTP_METHODS.GET) {
-                const requestBody: any = _.pick(methodArgs, argNames);
+            if (pathArgNames.length) {
+                for (const argName of pathArgNames) {
+                    const regex = new RegExp(`{${pathArgNames}}`);
+                    const argValue = methodArgs[argName]
+                    url = url.replace(regex, argValue)
+                }
+            }
+            if (queryArgNames.length) {
+                const urlArgParts: string[] = _.map(_.filter(queryArgNames, e => e in methodArgs), e => `${e}=${methodArgs[e]}`)
+                const urlArgs = urlArgParts.join('&')
+                url += `?${urlArgs}`
+            }
+            if (bodyArgNames.length) {
+                const requestBody: any = _.pick(methodArgs, bodyArgNames);
                 fetchOptions.body = JSON.stringify(requestBody);
             }
             return this.handleRequest(url, fetchOptions);
