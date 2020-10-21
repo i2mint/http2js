@@ -28,14 +28,19 @@ export default class Http2jsClient {
     refreshInputs: any = {};
     title: string = '';
     version: string = '';
-    constructor(openapiSpec, auth) {
+    constructor(openapiSpec, options?: { auth?: any, header?: any }) {
         const serverInfo: any = openapiSpec.info;
         this.title = serverInfo.title;
         this.version = serverInfo.version;
         this.baseUrl = openapiSpec.servers[0].url;
         const security: any = openapiSpec.security;
+        const auth: any = options ? options.auth : null;
+        const header: any = options ? options.header : null;
         if (security && auth) {
             this.initSecurity(openapiSpec, auth);
+        }
+        if (header) {
+            this.header = header;
         }
         _.forEach(openapiSpec.paths, (pathSpec: any, pathname: string) =>
             _.forEach(pathSpec, (methodSpec: any, methodname: string) =>
@@ -141,7 +146,10 @@ export default class Http2jsClient {
         _.forEach(this.loginResponseKeys, (key: string) => {
             const value: string = loginResult[key] || '';
             if (key === 'jwt') {
-                this.header = {Authorization: `Bearer ${value}`};
+                if (!this.header) {
+                    this.header = {};
+                }
+                this.header.Authorization = `Bearer ${value}`;
             } else if (this.refreshInputKeys.includes(key)) {
                 this.refreshInputs[key] = value;
             }
