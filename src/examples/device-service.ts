@@ -1,4 +1,3 @@
-import { getGlobalState } from '../global-state';
 import { mkClientFromFile } from '../index';
 
 const path: string = './resources/device-svc-openapi.json';
