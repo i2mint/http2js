@@ -42,3 +42,6 @@ node_modules
 http2js-*.tgz
 dist/
 lib/
+
+# Transcripted JS files
+*.js

@@ -1,6 +1,7 @@
 // tslint:disable-next-line:no-var-requires
 const fetch: any = typeof window !== 'undefined' ? window.fetch : require('node-fetch');
 import * as _ from 'lodash';
+import { getGlobalState } from './global-state';
 
 export const enum AUTH_TYPES {
     UNSECURED = 'unsecured',
@@ -19,32 +20,44 @@ export default class Http2jsClient {
     apiKey: string = '';
     authType: AUTH_TYPES = AUTH_TYPES.UNSECURED;
     baseUrl: string = '';
-    header: any = {};
+    sessionState: any;
     loginArgs: any = {};
     loginResponseKeys: string[] = [];
     loginUrl: string = '';
     refreshExpiration: number = 0;
     refreshInputKeys: string[] = [];
-    refreshInputs: any = {};
     title: string = '';
     version: string = '';
-    constructor(openapiSpec, options?: { auth?: any, header?: any }) {
+
+    get header(): any {
+        return this.sessionState.header
+    }
+    set header(value: any) {
+        this.sessionState.header = value
+    }
+    get refreshInputs(): any {
+        return this.sessionState.refreshInputs
+    }
+    set refreshInputs(value: any) {
+        this.sessionState.refreshInputs = value
+    }
+
+    constructor(openapiSpec, auth, sessionState: any = null) {
         const serverInfo: any = openapiSpec.info;
         this.title = serverInfo.title;
         this.version = serverInfo.version;
         this.baseUrl = openapiSpec.servers[0].url;
         const security: any = openapiSpec.security;
-        const auth: any = options ? options.auth : null;
-        const header: any = options ? options.header : null;
         if (security && auth) {
             this.initSecurity(openapiSpec, auth);
-        }
-        if (header) {
-            this.header = header;
         }
         _.forEach(openapiSpec.paths, (pathSpec: any, pathname: string) =>
             _.forEach(pathSpec, (methodSpec: any, methodname: string) =>
                 this.registerMethod(pathname, methodname.toUpperCase(), methodSpec)));
+        this.sessionState = sessionState ? sessionState : getGlobalState(
+            'sessionState',
+            {header: {}, refreshInputs: {}}
+        )
     }
 
     initSecurity(openapiSpec, auth): void {
@@ -74,7 +87,6 @@ export default class Http2jsClient {
     }
 
     registerMethod(pathname: string, httpMethod: string, methodSpec: any): void {
-        console.log({ pathname, httpMethod, methodSpec: JSON.stringify(methodSpec) });
         const url: string = this.baseUrl + pathname;
         const contentType: string = _.keys(methodSpec.requestBody.content)[0];
         const methodName: string = methodSpec['x-method_name'] || pathname;
@@ -100,15 +112,12 @@ export default class Http2jsClient {
                 } else {
                     fetchOptions.headers.Authorization = this.header.Authorization;
                 }
-                console.log({ url, fetchOptions });
                 return fetch(url, fetchOptions);
             }).then((response: Response) => response.json())
     }
 
     ensureLogin(): Promise<any> {
-        console.log({ authType: this.authType });
         if (this.authType !== AUTH_TYPES.JWT) {
-            console.log()
             return Promise.resolve(true);
         } else if (this.header.Authorization) {
             if (this.refreshExpiration) {
@@ -125,7 +134,6 @@ export default class Http2jsClient {
     }
 
     login(): Promise<void> {
-        console.log({ url: this.loginUrl, args: this.loginArgs });
         return fetch(this.loginUrl, {
             body: JSON.stringify(this.loginArgs),
             headers: {'Content-type': 'application/json'},
@@ -139,7 +147,6 @@ export default class Http2jsClient {
     }
 
     receiveLogin(loginResult: any): void {
-        console.log({ loginResult });
         if (loginResult.refresh_expiration) {
             this.refreshExpiration = loginResult.refresh_expiration;
         }
