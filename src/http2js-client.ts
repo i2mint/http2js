@@ -75,7 +75,9 @@ export default class Http2jsClient {
                 const authArgs: string[] = loginDetails.login_inputs;
                 this.loginArgs = {};
                 _.forEach(authArgs, (key: string) => {
-                    this.loginArgs[key] = auth[key] || '';
+                    if (auth[key] !== undefined) {
+                        this.loginArgs[key] = auth[key];
+                    }
                 });
                 this.refreshInputKeys = loginDetails.refresh_inputs || [];
                 this.loginResponseKeys = loginDetails.outputs || [];
@@ -102,6 +104,7 @@ export default class Http2jsClient {
             }
             return this.handleRequest(url, fetchOptions);
         };
+        this[methodName].methodName = methodName;
     }
 
     handleRequest(url, fetchOptions): Promise<any> {
@@ -113,7 +116,7 @@ export default class Http2jsClient {
                     fetchOptions.headers.Authorization = this.header.Authorization;
                 }
                 return fetch(url, fetchOptions);
-            }).then((response: Response) => response.json())
+            }).then((response: Response) => response.json());
     }
 
     ensureLogin(): Promise<any> {
