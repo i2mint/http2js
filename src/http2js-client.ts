@@ -29,6 +29,7 @@ export default class Http2jsClient {
     authType: AUTH_TYPES = AUTH_TYPES.UNSECURED;
     baseUrl = '';
     endpoints: any = {};
+    jwt = '';
     jwtExpiration = 0;
     loggedIn = false;
     loginArgs: any = {};
@@ -37,6 +38,7 @@ export default class Http2jsClient {
     persistKey = '';
     refreshExpiration = 0;
     refreshInputKeys: Set<string> = new Set([]);
+    refreshToken = '';
     refreshUrl = '';
     sessionState: any;
     title = '';
@@ -82,12 +84,14 @@ export default class Http2jsClient {
         try {
             const parsed = parseJwt(jwt);
             this.jwtExpiration = parsed.exp * 1000;
+            this.jwt = jwt;
             this.sessionState.header.Authorization = `Bearer ${jwt}`;
             this.loggedIn = true;
         } catch (e) {
             console.error({ e });
             this.loggedIn = false;
             this.sessionState.header.Authorization = '';
+            this.jwt = '';
         }
     }
 
@@ -101,11 +105,14 @@ export default class Http2jsClient {
                     this.refreshExpiration = value;
                 }
             } else if (key === 'jwt') {
-                this.registerJwt(value);
                 if (!this.sessionState.header) {
                     this.sessionState.header = {};
                 }
+                this.registerJwt(value);
             } else {
+                if (key === 'refresh_token') {
+                    this.refreshToken = value;
+                }
                 if (authArgs.has(key)) {
                     this.loginArgs[key] = value;
                 }
@@ -253,6 +260,9 @@ export default class Http2jsClient {
                 }
                 this.registerJwt(value);
             } else if (this.refreshInputKeys.has(key)) {
+                if (key === 'refresh_token') {
+                    this.refreshToken = value;
+                }
                 this.refreshInputs[key] = value;
             }
         });
